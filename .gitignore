@@ -1,0 +1,20 @@
+# Secrets
+.env
+application-local.properties
+application-*.properties
+!application.properties
+*.key
+*.pem
+
+# Maven
+target/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
