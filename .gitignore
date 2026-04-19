@@ -1,11 +1,11 @@
 # Secrets
-.env
+*.env
 application-local.properties
 application-*.properties
 !application.properties
 *.key
 *.pem
-.env.example
+*.env.example
 
 # Maven
 target/
