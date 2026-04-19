@@ -2,14 +2,16 @@ package com.cuemath.flashcard.deck.service;
 
 import com.cuemath.flashcard.auth.entity.User;
 import com.cuemath.flashcard.auth.repository.UserRepository;
+import com.cuemath.flashcard.card.service.CardGenerationService;
 import com.cuemath.flashcard.deck.dto.DeckResponse;
 import com.cuemath.flashcard.deck.dto.DeckSummaryResponse;
 import com.cuemath.flashcard.deck.entity.Deck;
-import com.cuemath.flashcard.deck.entity.Deck.DeckStatus;
 import com.cuemath.flashcard.deck.repository.DeckRepository;
 import com.cuemath.flashcard.exception.DeckNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,66 +21,89 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
+@RequiredArgsConstructor
 public class DeckService {
 
     private final DeckRepository deckRepository;
     private final UserRepository userRepository;
     private final PdfExtractionService pdfExtractionService;
 
-    @Transactional(readOnly = true)
+    /**
+     * @Lazy breaks the potential CardGenerationService → DeckRepository ← DeckService cycle.
+     * Field injection is used here because @RequiredArgsConstructor would pick up @Lazy only
+     * if combined with a custom constructor — setter/field with @Lazy is simpler.
+     */
+    @Lazy
+    @Autowired
+    private CardGenerationService cardGenerationService;
+
+    /**
+     * Self-injection through the Spring proxy so that calling processDeckAsync() from
+     * createDeck() actually goes through the AOP proxy and the @Async advice fires.
+     * Without this, the @Async annotation on processDeckAsync would be ignored for
+     * internal calls.
+     */
+    @Lazy
+    @Autowired
+    private DeckService self;
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     public List<DeckSummaryResponse> listDecks(UUID userId) {
         return deckRepository.findByUserIdOrderByCreatedAtDesc(userId)
-                .stream().map(DeckSummaryResponse::from).toList();
+                .stream()
+                .map(DeckSummaryResponse::from)
+                .toList();
     }
 
-    @Transactional(readOnly = true)
     public DeckResponse getDeck(UUID deckId, UUID userId) {
-        return DeckResponse.from(deckRepository.findByIdAndUserId(deckId, userId)
-                .orElseThrow(() -> new DeckNotFoundException(deckId)));
+        Deck deck = deckRepository.findByIdAndUserId(deckId, userId)
+                .orElseThrow(() -> new DeckNotFoundException(deckId));
+        return DeckResponse.from(deck);
     }
 
     @Transactional
     public DeckResponse createDeck(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
         String originalFilename = file.getOriginalFilename();
-        Deck deck = Deck.builder()
-                .user(user)
-                .title(deriveTitle(originalFilename))
-                .sourceFilename(originalFilename)
-                .status(DeckStatus.PROCESSING)
-                .build();
+        String title = (originalFilename != null)
+                ? originalFilename.replaceAll("(?i)\\.pdf$", "")
+                : "Untitled";
 
-        deck = deckRepository.save(deck);
-        log.info("Deck {} created with status PROCESSING", deck.getId());
-        processDeckAsync(deck.getId(), file);
-        return DeckResponse.from(deck);
+        Deck deck = new Deck();
+        deck.setUser(user);
+        deck.setTitle(title);
+        deck.setSourceFilename(originalFilename);
+        deck.setStatus(Deck.DeckStatus.PROCESSING);
+        Deck saved = deckRepository.save(deck);
+
+        // Call through `self` so the @Async proxy intercepts the invocation
+        self.processDeckAsync(saved.getId(), file);
+        return DeckResponse.from(saved);
     }
 
     @Async("taskExecutor")
     public void processDeckAsync(UUID deckId, MultipartFile file) {
-        log.info("Starting async PDF processing for deck {}", deckId);
         try {
-            String extractedText = pdfExtractionService.extractText(file);
-            log.info("Extracted {} chars from PDF for deck {}", extractedText.length(), deckId);
-            // Module 2 will call CardGenerationService here
-            updateDeckStatus(deckId, DeckStatus.READY);
-            log.info("Deck {} marked READY", deckId);
+            String text = pdfExtractionService.extractText(file);
+            cardGenerationService.generateCards(deckId, text);
+            // Call through self so @Transactional on updateDeckStatus is honoured
+            self.updateDeckStatus(deckId, Deck.DeckStatus.READY);
         } catch (Exception e) {
-            log.error("PDF processing failed for deck {}", deckId, e);
-            updateDeckStatus(deckId, DeckStatus.FAILED);
+            log.error("Failed to process deck {}", deckId, e);
+            self.updateDeckStatus(deckId, Deck.DeckStatus.FAILED);
         }
     }
 
     @Transactional
-    public void updateDeckStatus(UUID deckId, DeckStatus status) {
-        Deck deck = deckRepository.findById(deckId)
-                .orElseThrow(() -> new IllegalStateException("Deck not found: " + deckId));
-        deck.setStatus(status);
-        deckRepository.save(deck);
+    public void updateDeckStatus(UUID deckId, Deck.DeckStatus status) {
+        deckRepository.findById(deckId).ifPresent(deck -> {
+            deck.setStatus(status);
+            deckRepository.save(deck);
+        });
     }
 
     @Transactional
@@ -86,13 +111,5 @@ public class DeckService {
         Deck deck = deckRepository.findByIdAndUserId(deckId, userId)
                 .orElseThrow(() -> new DeckNotFoundException(deckId));
         deckRepository.delete(deck);
-        log.info("Deck {} deleted by user {}", deckId, userId);
-    }
-
-    private String deriveTitle(String filename) {
-        if (filename == null || filename.isBlank()) return "Untitled Deck";
-        String name = filename.toLowerCase().endsWith(".pdf")
-                ? filename.substring(0, filename.length() - 4) : filename;
-        return name.replace("_", " ").replace("-", " ").strip();
     }
 }
