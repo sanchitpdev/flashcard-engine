@@ -1,5 +1,6 @@
 package com.cuemath.flashcard.card.controller;
 
+import com.cuemath.flashcard.auth.repository.UserRepository;
 import com.cuemath.flashcard.card.dto.CardResponse;
 import com.cuemath.flashcard.card.dto.GraphResponse;
 import com.cuemath.flashcard.card.repository.CardRepository;
@@ -23,6 +24,16 @@ public class CardController {
     private final CardRepository cardRepository;
     private final DeckRepository deckRepository;
     private final DependencyGraphService dependencyGraphService;
+    private final UserRepository userRepository; // <-- ADDED THIS
+
+    /**
+     * Helper method to safely get the user's UUID from their email
+     */
+    private UUID getUserId(UserDetails userDetails) {
+        return userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"))
+                .getId();
+    }
 
     /**
      * GET /api/decks/{id}/cards — list all cards for a deck the caller owns.
@@ -32,7 +43,8 @@ public class CardController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails); // <-- FIXED THIS
+
         deckRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new DeckNotFoundException(id));
 
@@ -52,7 +64,8 @@ public class CardController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails); // <-- FIXED THIS
+
         return ResponseEntity.ok(dependencyGraphService.buildGraph(id, userId));
     }
 }

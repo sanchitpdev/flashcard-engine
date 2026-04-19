@@ -1,5 +1,6 @@
 package com.cuemath.flashcard.study.controller;
 
+import com.cuemath.flashcard.auth.repository.UserRepository;
 import com.cuemath.flashcard.study.dto.ReviewRequest;
 import com.cuemath.flashcard.study.dto.ReviewResponse;
 import com.cuemath.flashcard.study.dto.StudyQueueResponse;
@@ -20,11 +21,12 @@ import java.util.UUID;
 public class StudyController {
 
     private final SchedulerService schedulerService;
+    private final UserRepository userRepository;
 
     @GetMapping("/queue")
     public ResponseEntity<List<StudyQueueResponse>> getQueue(
             @AuthenticationPrincipal UserDetails userDetails) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         return ResponseEntity.ok(schedulerService.buildQueue(userId));
     }
 
@@ -32,7 +34,13 @@ public class StudyController {
     public ResponseEntity<ReviewResponse> submitReview(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody ReviewRequest request) {
-        UUID userId = UUID.fromString(userDetails.getUsername());
+        UUID userId = getUserId(userDetails);
         return ResponseEntity.ok(schedulerService.submitReview(userId, request));
+    }
+
+    private UUID getUserId(UserDetails userDetails) {
+        return userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"))
+                .getId();
     }
 }
