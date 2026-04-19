@@ -1,0 +1,24 @@
+# Render deployment configuration (alternative to Railway)
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: flashcard-engine
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # set manually in Render dashboard
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROK_API_KEY
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false          # set to your Vercel frontend URL

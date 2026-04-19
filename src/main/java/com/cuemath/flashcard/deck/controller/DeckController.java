@@ -10,6 +10,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.cuemath.flashcard.auth.repository.UserRepository;
 
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public class DeckController {
 
     private final DeckService deckService;
     private final DeckUploadRateLimiter rateLimiter;
+    private final UserRepository userRepository;
 
     @GetMapping
     public ResponseEntity<List<DeckSummaryResponse>> listDecks(@AuthenticationPrincipal UserDetails userDetails) {
@@ -40,7 +42,7 @@ public class DeckController {
             throw new IllegalArgumentException("Only PDF files are accepted.");
         }
         // Rate limit
-        rateLimiter.consume(UUID.fromString(userDetails.getUsername()));
+        rateLimiter.consume(uuid(userDetails));
 
         validatePdf(file);
         return ResponseEntity.status(HttpStatus.CREATED).body(deckService.createDeck(uuid(userDetails), file));
@@ -59,7 +61,11 @@ public class DeckController {
         return ResponseEntity.noContent().build();
     }
 
-    private UUID uuid(UserDetails u) { return UUID.fromString(u.getUsername()); }
+    private UUID uuid(UserDetails u) {
+        return userRepository.findByEmail(u.getUsername())
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"))
+                .getId();
+    }
 
     private void validatePdf(MultipartFile file) {
         if (file == null || file.isEmpty())
