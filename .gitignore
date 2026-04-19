@@ -5,6 +5,7 @@ application-*.properties
 !application.properties
 *.key
 *.pem
+.env.example
 
 # Maven
 target/

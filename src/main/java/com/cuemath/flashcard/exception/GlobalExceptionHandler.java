@@ -1,5 +1,6 @@
 package com.cuemath.flashcard.exception;
 
+import com.cuemath.flashcard.ratelimit.RateLimitExceededException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.validation.FieldError;
