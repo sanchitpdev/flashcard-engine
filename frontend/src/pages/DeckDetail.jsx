@@ -327,11 +327,11 @@ export default function DeckDetail() {
                       >
                         <div
                             className={`fc-inner${isTop && flipped ? ' is-flipped' : ''}`}
-                            style={{ minHeight:'clamp(340px, 46vh, 540px)', pointerEvents: isTop ? 'auto' : 'none' }}
+                            style={{ minHeight:'clamp(340px, 46vh, 540px)', pointerEvents: isTop ? 'auto' : 'none', display: 'flex', flexDirection: 'column' }}
                             onClick={() => isTop && !drag.active && setFlipped(f => !f)}
                         >
                           {/* Front Face */}
-                          <div className="fc-face fc-face--front" style={{ borderTop:`8px solid ${cat.color || 'var(--primary)'}`, position:'absolute', inset:0 }}>
+                          <div className="fc-face fc-face--front" style={{ borderTop:`8px solid ${cat.color || 'var(--primary)'}`, position:'absolute', inset:0, display: 'flex', flexDirection: 'column' }}>
 
                             {/* Swipe Glow Feedback (Only on top card) */}
                             {isTop && <div className="swipe-glow swipe-glow-green" style={{ opacity: drag.x > 30 ? drag.x/150 : 0 }} />}
@@ -347,32 +347,38 @@ export default function DeckDetail() {
                               {DIFF[c.difficulty] || 'Foundational'}
                             </div>
 
-                            <span className="badge" style={{ background:cat.bg, color:cat.color, marginBottom:24, fontSize:'1rem', padding:'8px 20px', fontWeight:900 }}>
-                        {cat.label}
-                      </span>
+                            <span className="badge" style={{ background:cat.bg, color:cat.color, marginBottom:24, fontSize:'1rem', padding:'8px 20px', fontWeight:900, alignSelf: 'flex-start' }}>
+                              {cat.label}
+                            </span>
 
-                            <p style={{ fontSize:'clamp(1.4rem, 3.5vw, 2.2rem)', lineHeight:1.6, color:'var(--navy)', fontFamily:'var(--font-display)', fontWeight:800, maxWidth:720, margin:0, pointerEvents:'none' }}>
-                              {c.front}
-                            </p>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                              <p style={{ fontSize:'clamp(1.4rem, 3.5vw, 2.2rem)', lineHeight:1.6, color:'var(--navy)', fontFamily:'var(--font-display)', fontWeight:800, maxWidth:720, margin:0, pointerEvents:'none' }}>
+                                {c.front}
+                              </p>
+                            </div>
 
-                            <div style={{ marginTop:40, display:'flex', alignItems:'center', gap:10, color:'var(--text-muted)', fontSize:'0.95rem', fontWeight:800 }}>
+                            {/* FIXED BOTTOM ALIGNMENT FOR FRONT */}
+                            <div style={{ marginTop:'auto', paddingTop: 20, display:'flex', alignItems:'center', gap:10, color:'var(--text-muted)', fontSize:'0.95rem', fontWeight:800 }}>
                               <span style={{ width:36, height:36, borderRadius:'50%', background:'var(--primary-light)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.2rem', color:'var(--primary-dark)' }}>↩</span>
                               Click to flip • Swipe to navigate
                             </div>
                           </div>
 
                           {/* Back Face */}
-                          <div className="fc-face fc-face--back" style={{ position:'absolute', inset:0 }}>
+                          <div className="fc-face fc-face--back" style={{ position:'absolute', inset:0, display: 'flex', flexDirection: 'column' }}>
                             <div style={{ position:'absolute', top:0, right:0, width:200, height:200, background:'radial-gradient(circle, rgba(245,166,35,0.12) 0%, transparent 70%)', borderRadius:'0 var(--radius-xl) 0 100%', pointerEvents:'none' }} />
                             <div style={{ position:'absolute', bottom:0, left:0, width:160, height:160, background:'radial-gradient(circle, rgba(0,182,122,0.1) 0%, transparent 70%)', borderRadius:'0 100% 0 var(--radius-xl)', pointerEvents:'none' }} />
 
                             <div style={{ fontSize:'0.9rem', color:'rgba(255,255,255,0.4)', fontWeight:900, letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:28, fontFamily:'var(--font-display)' }}>✦  Answer  ✦</div>
 
-                            <p style={{ fontSize:'clamp(1.2rem, 3vw, 1.8rem)', lineHeight:1.8, color:'rgba(255,255,255,0.98)', fontFamily:'var(--font-body)', fontWeight:600, maxWidth:700, margin:0, position:'relative', zIndex:1, pointerEvents:'none' }}>
-                              {c.back}
-                            </p>
+                            <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
+                              <p style={{ fontSize:'clamp(1.2rem, 3vw, 1.8rem)', lineHeight:1.8, color:'rgba(255,255,255,0.98)', fontFamily:'var(--font-body)', fontWeight:600, maxWidth:700, margin:0, position:'relative', zIndex:1, pointerEvents:'none' }}>
+                                {c.back}
+                              </p>
+                            </div>
 
-                            <div style={{ marginTop:36, display:'flex', alignItems:'center', gap:8, color:'rgba(255,255,255,0.35)', fontSize:'0.9rem', fontWeight:800 }}>
+                            {/* FIXED BOTTOM ALIGNMENT FOR BACK */}
+                            <div style={{ marginTop:'auto', paddingTop: 20, display:'flex', alignItems:'center', gap:8, color:'rgba(255,255,255,0.35)', fontSize:'0.9rem', fontWeight:800 }}>
                               <span style={{ fontSize: '1.2rem' }}>↩</span> Tap to flip back
                             </div>
                           </div>
@@ -532,7 +538,7 @@ export default function DeckDetail() {
                       <p style={{ lineHeight:1.7, color:'var(--text)', fontSize:'1.1rem', flex:1, fontWeight:600 }}>
                         {fl ? c.back : c.front}
                       </p>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:8 }}
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px', marginTop:'auto' }}
                            onClick={e => e.stopPropagation()}>
                         <span style={{ fontSize:'0.85rem', color:'var(--text-muted)', fontWeight:700 }}>tap to {fl ? 'flip back' : 'reveal'}</span>
                         {lrn
