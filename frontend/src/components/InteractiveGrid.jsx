@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 
 export default function InteractiveGrid() {
-  const containerRef = useRef(null);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const tilesRef = useRef([]); // Stores direct references to the DOM elements
 
@@ -81,7 +80,7 @@ export default function InteractiveGrid() {
   }, []);
 
   return (
-      <div className="interactive-grid-wrapper" ref={containerRef}>
+      <div className="interactive-grid-wrapper" >
         {tileDefs.map((def, i) => (
             <div
                 key={i}

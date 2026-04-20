@@ -18,7 +18,5 @@ services:
         generateValue: true
       - key: GEMINI_API_KEY
         sync: false
-      - key: GROK_API_KEY
-        sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false          # set to your Vercel frontend URL

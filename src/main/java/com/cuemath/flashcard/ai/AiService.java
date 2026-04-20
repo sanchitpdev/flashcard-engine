@@ -24,23 +24,18 @@ import java.util.Map;
 public class AiService {
 
     private final RestClient geminiRestClient;
-    private final RestClient grokRestClient;
     private final ObjectMapper objectMapper;
     private final String geminiApiKey;
 
     @Value("${gemini.api.model:gemini-1.5-flash}")
     private String geminiModel;
 
-    @Value("${grok.api.model:grok-3-mini}")
-    private String grokModel;
 
     public AiService(
             @Qualifier("geminiRestClient") RestClient geminiRestClient,
-            @Qualifier("grokRestClient")  RestClient grokRestClient,
             ObjectMapper objectMapper,
             @Qualifier("geminiApiKey")    String geminiApiKey) {
         this.geminiRestClient = geminiRestClient;
-        this.grokRestClient   = grokRestClient;
         this.objectMapper     = objectMapper;
         this.geminiApiKey     = geminiApiKey;
     }

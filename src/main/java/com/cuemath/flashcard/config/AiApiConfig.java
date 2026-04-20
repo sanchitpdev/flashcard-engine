@@ -16,25 +16,12 @@ public class AiApiConfig {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    @Value("${grok.api.key}")
-    private String grokApiKey;
-
     /** RestClient pointed at Google's Generative Language API. */
     @Bean("geminiRestClient")
     public RestClient geminiRestClient() {
         return RestClient.builder()
                 .baseUrl("https://generativelanguage.googleapis.com")
                 .defaultHeader("Content-Type", "application/json")
-                .build();
-    }
-
-    /** RestClient pointed at xAI's OpenAI-compatible endpoint. */
-    @Bean("grokRestClient")
-    public RestClient grokRestClient() {
-        return RestClient.builder()
-                .baseUrl("https://api.x.ai")
-                .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("Authorization", "Bearer " + grokApiKey)
                 .build();
     }
 
