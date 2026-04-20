@@ -35,6 +35,13 @@ public class Deck {
     @Column(nullable = false, length = 20)
     private DeckStatus status;
 
+    // PDF stored as bytes directly in Postgres — survives redeploys, no extra service needed
+    @Column(name = "pdf_data", columnDefinition = "BYTEA")
+    private byte[] pdfData;
+
+    @Column(name = "pdf_generated_at")
+    private Instant pdfGeneratedAt;
+
     @PrePersist
     void prePersist() {
         this.createdAt = Instant.now();

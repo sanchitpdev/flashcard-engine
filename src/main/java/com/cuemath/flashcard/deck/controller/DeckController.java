@@ -32,18 +32,12 @@ public class DeckController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DeckResponse> createDeck(@AuthenticationPrincipal UserDetails userDetails,
                                                     @RequestParam("file") MultipartFile file) {
-        // Size guard (belt-and-suspenders beyond multipart config)
-        if (file.getSize() > 10L * 1024 * 1024) {
+        if (file.getSize() > 10L * 1024 * 1024)
             throw new IllegalArgumentException("File size exceeds 10 MB limit.");
-        }
-        // Content-type guard
         String ct = file.getContentType();
-        if (ct == null || !ct.equals("application/pdf")) {
+        if (ct == null || !ct.equals("application/pdf"))
             throw new IllegalArgumentException("Only PDF files are accepted.");
-        }
-        // Rate limit
         rateLimiter.consume(uuid(userDetails));
-
         validatePdf(file);
         return ResponseEntity.status(HttpStatus.CREATED).body(deckService.createDeck(uuid(userDetails), file));
     }
@@ -59,6 +53,28 @@ public class DeckController {
                                             @PathVariable UUID id) {
         deckService.deleteDeck(id, uuid(userDetails));
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * GET /api/decks/{id}/pdf
+     * Streams the generated flashcard PDF for download.
+     */
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadPdf(@AuthenticationPrincipal UserDetails userDetails,
+                                               @PathVariable UUID id) {
+        byte[] pdfBytes = deckService.getDeckPdfBytes(id, uuid(userDetails));
+        if (pdfBytes == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        // Fetch deck title for filename
+        var deck = deckService.getDeck(id, uuid(userDetails));
+        String filename = deck.title().replaceAll("[^a-zA-Z0-9_\\-]", "_") + "_flashcards.pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentLength(pdfBytes.length)
+                .body(pdfBytes);
     }
 
     private UUID uuid(UserDetails u) {

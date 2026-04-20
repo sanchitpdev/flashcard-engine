@@ -7,6 +7,8 @@ import Decks from './pages/Decks'
 import DeckDetail from './pages/DeckDetail'
 import Study from './pages/Study'
 import Progress from './pages/Progress'
+import Test from './pages/Test'
+import TestResult from './pages/TestResult'
 
 function PrivateRoute({ children }) {
   const { accessToken } = useAuthStore()
@@ -23,6 +25,8 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/decks" element={<PrivateRoute><Decks /></PrivateRoute>} />
         <Route path="/decks/:id" element={<PrivateRoute><DeckDetail /></PrivateRoute>} />
+        <Route path="/decks/:id/test" element={<PrivateRoute><Test /></PrivateRoute>} />
+        <Route path="/decks/:id/test/result" element={<PrivateRoute><TestResult /></PrivateRoute>} />
         <Route path="/study" element={<PrivateRoute><Study /></PrivateRoute>} />
         <Route path="/progress" element={<PrivateRoute><Progress /></PrivateRoute>} />
       </Routes>

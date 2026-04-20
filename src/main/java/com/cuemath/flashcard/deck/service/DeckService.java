@@ -2,6 +2,8 @@ package com.cuemath.flashcard.deck.service;
 
 import com.cuemath.flashcard.auth.entity.User;
 import com.cuemath.flashcard.auth.repository.UserRepository;
+import com.cuemath.flashcard.card.entity.Card;
+import com.cuemath.flashcard.card.repository.CardRepository;
 import com.cuemath.flashcard.card.service.CardGenerationService;
 import com.cuemath.flashcard.deck.dto.DeckResponse;
 import com.cuemath.flashcard.deck.dto.DeckSummaryResponse;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,22 +31,13 @@ public class DeckService {
     private final DeckRepository deckRepository;
     private final UserRepository userRepository;
     private final PdfExtractionService pdfExtractionService;
+    private final CardRepository cardRepository;
+    private final FlashcardPdfService flashcardPdfService;
 
-    /**
-     * @Lazy breaks the potential CardGenerationService → DeckRepository ← DeckService cycle.
-     * Field injection is used here because @RequiredArgsConstructor would pick up @Lazy only
-     * if combined with a custom constructor — setter/field with @Lazy is simpler.
-     */
     @Lazy
     @Autowired
     private CardGenerationService cardGenerationService;
 
-    /**
-     * Self-injection through the Spring proxy so that calling processDeckAsync() from
-     * createDeck() actually goes through the AOP proxy and the @Async advice fires.
-     * Without this, the @Async annotation on processDeckAsync would be ignored for
-     * internal calls.
-     */
     @Lazy
     @Autowired
     private DeckService self;
@@ -80,7 +74,6 @@ public class DeckService {
         deck.setStatus(Deck.DeckStatus.PROCESSING);
         Deck saved = deckRepository.save(deck);
 
-        // Call through `self` so the @Async proxy intercepts the invocation
         self.processDeckAsync(saved.getId(), file);
         return DeckResponse.from(saved);
     }
@@ -90,8 +83,9 @@ public class DeckService {
         try {
             String text = pdfExtractionService.extractText(file);
             cardGenerationService.generateCards(deckId, text);
-            // Call through self so @Transactional on updateDeckStatus is honoured
             self.updateDeckStatus(deckId, Deck.DeckStatus.READY);
+            // Generate flashcard PDF after deck is ready
+            self.generateFlashcardPdf(deckId);
         } catch (Exception e) {
             log.error("Failed to process deck {}", deckId, e);
             self.updateDeckStatus(deckId, Deck.DeckStatus.FAILED);
@@ -106,10 +100,42 @@ public class DeckService {
         });
     }
 
+    /**
+     * Generates a flashcard PDF from the deck's cards and stores bytes in DB.
+     * Runs after deck is READY. Non-blocking — called from async thread.
+     */
+    @Transactional
+    public void generateFlashcardPdf(UUID deckId) {
+        deckRepository.findById(deckId).ifPresent(deck -> {
+            try {
+                List<Card> cards = cardRepository.findByDeckId(deckId);
+                if (cards.isEmpty()) return;
+                byte[] pdfBytes = flashcardPdfService.generate(deck, cards);
+                deck.setPdfData(pdfBytes);
+                deck.setPdfGeneratedAt(Instant.now());
+                deckRepository.save(deck);
+                log.info("Flashcard PDF generated for deck {} ({} bytes)", deckId, pdfBytes.length);
+            } catch (Exception e) {
+                log.error("Failed to generate flashcard PDF for deck {}", deckId, e);
+                // Non-fatal — deck stays READY, PDF just won't be available
+            }
+        });
+    }
+
     @Transactional
     public void deleteDeck(UUID deckId, UUID userId) {
         Deck deck = deckRepository.findByIdAndUserId(deckId, userId)
                 .orElseThrow(() -> new DeckNotFoundException(deckId));
         deckRepository.delete(deck);
+    }
+
+    /**
+     * Returns raw PDF bytes for download. Returns null if not yet generated.
+     */
+    @Transactional(readOnly = true)
+    public byte[] getDeckPdfBytes(UUID deckId, UUID userId) {
+        Deck deck = deckRepository.findByIdAndUserId(deckId, userId)
+                .orElseThrow(() -> new DeckNotFoundException(deckId));
+        return deck.getPdfData();
     }
 }
