@@ -26,23 +26,23 @@ public class CardGenerationService {
     // ── System prompts ────────────────────────────────────────────────────────
     private static final String CARD_GEN_SYSTEM =
             "You are an expert educator and instructional designer. Generate high-quality " +
-            "flashcards from educational text. Rules: Each card tests understanding not just " +
-            "recall. Cover key definitions, conceptual relationships, common misconceptions, " +
-            "worked examples. Assign concept_name as a short unique label. Assign " +
-            "concept_category: one of [definition, relationship, procedure, example, " +
-            "misconception]. Assign difficulty: 1=foundational, 2=intermediate, 3=advanced. " +
-            "Return ONLY valid JSON, no preamble, no markdown fences. " +
-            "Schema: {\"cards\":[{\"front\":\"str\",\"back\":\"str\",\"concept_name\":\"str\"," +
-            "\"concept_category\":\"str\",\"difficulty\":1}]}";
+                    "flashcards from educational text. Rules: Each card tests understanding not just " +
+                    "recall. Cover key definitions, conceptual relationships, common misconceptions, " +
+                    "worked examples. Assign concept_name as a short unique label. Assign " +
+                    "concept_category: one of [definition, relationship, procedure, example, " +
+                    "misconception]. Assign difficulty: 1=foundational, 2=intermediate, 3=advanced. " +
+                    "Return ONLY valid JSON, no preamble, no markdown fences. " +
+                    "Schema: {\"cards\":[{\"front\":\"str\",\"back\":\"str\",\"concept_name\":\"str\"," +
+                    "\"concept_category\":\"str\",\"difficulty\":1}]}";
 
     private static final String DEP_SYSTEM =
             "You are an expert in knowledge graph construction for education. Given concept " +
-            "names from flashcards, identify prerequisite relationships. Rules: A prerequisite " +
-            "means a student cannot correctly understand concept B without first understanding " +
-            "concept A. Only include HIGH-CONFIDENCE relationships. Do not invent relationships " +
-            "not present in the concepts. Return ONLY valid JSON, no preamble, no markdown " +
-            "fences. Schema: {\"dependencies\":[{\"concept\":\"str\",\"requires\":\"str\"}]} " +
-            "where concept needs requires to be mastered first.";
+                    "names from flashcards, identify prerequisite relationships. Rules: A prerequisite " +
+                    "means a student cannot correctly understand concept B without first understanding " +
+                    "concept A. Only include HIGH-CONFIDENCE relationships. Do not invent relationships " +
+                    "not present in the concepts. Return ONLY valid JSON, no preamble, no markdown " +
+                    "fences. Schema: {\"dependencies\":[{\"concept\":\"str\",\"requires\":\"str\"}]} " +
+                    "where concept needs requires to be mastered first.";
 
     // ── Dependencies ──────────────────────────────────────────────────────────
     private final AiService aiService;
@@ -60,7 +60,7 @@ public class CardGenerationService {
         Deck deck = deckRepository.findById(deckId)
                 .orElseThrow(() -> new RuntimeException("Deck not found: " + deckId));
 
-        // Step 1 — Card generation (Gemini → Grok fallback handled inside AiService)
+        // Step 1 — Card generation
         List<Card> savedCards = generateAndSaveCards(deck, extractedText);
         if (savedCards.isEmpty()) {
             log.warn("No cards generated for deck {}", deckId);
@@ -80,10 +80,19 @@ public class CardGenerationService {
         try {
             String responseText = aiService.call(CARD_GEN_SYSTEM, userMsg);
             JsonNode root = objectMapper.readTree(responseText);
-            JsonNode cardsArray = root.get("cards");
+
+            // FIX: Smart parsing to handle both { "cards": [ ... ] } AND [ ... ] shapes
+            JsonNode cardsArray;
+            if (root.has("cards")) {
+                cardsArray = root.get("cards");
+            } else if (root.isArray()) {
+                cardsArray = root;
+            } else {
+                cardsArray = null;
+            }
 
             if (cardsArray == null || !cardsArray.isArray()) {
-                log.error("Unexpected card-generation response shape for deck {}", deck.getId());
+                log.error("Unexpected card response shape for deck {}. Raw Response: {}", deck.getId(), responseText);
                 return List.of();
             }
 
@@ -124,10 +133,19 @@ public class CardGenerationService {
         try {
             String responseText = aiService.call(DEP_SYSTEM, userMsg);
             JsonNode root = objectMapper.readTree(responseText);
-            JsonNode depsArray = root.get("dependencies");
+
+            // FIX: Smart parsing to handle both { "dependencies": [ ... ] } AND [ ... ] shapes
+            JsonNode depsArray;
+            if (root.has("dependencies")) {
+                depsArray = root.get("dependencies");
+            } else if (root.isArray()) {
+                depsArray = root;
+            } else {
+                depsArray = null;
+            }
 
             if (depsArray == null || !depsArray.isArray()) {
-                log.warn("No dependency array in response — skipping dependency save");
+                log.warn("No dependency array in response — skipping dependency save. Raw: {}", responseText);
                 return;
             }
 
@@ -160,7 +178,6 @@ public class CardGenerationService {
             log.info("Saved {} dependencies for {} cards", savedCount, cards.size());
 
         } catch (Exception e) {
-            // Non-fatal — a deck without dependency edges is still usable
             log.error("Dependency extraction failed (non-fatal): {}", e.getMessage());
         }
     }
