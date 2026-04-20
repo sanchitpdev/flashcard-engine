@@ -1,11 +1,12 @@
-export default function Spinner({ size = 24, color = 'var(--cm-red)' }) {
+export default function Spinner({ size = 24, color = 'var(--primary)' }) {
   return (
     <div style={{
       width: size, height: size,
-      border: `3px solid ${color}20`,
-      borderTop: `3px solid ${color}`,
+      border: `2.5px solid ${color}28`,
+      borderTop: `2.5px solid ${color}`,
       borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite',
+      animation: 'spin 0.75s linear infinite',
+      flexShrink: 0,
     }} />
   )
 }

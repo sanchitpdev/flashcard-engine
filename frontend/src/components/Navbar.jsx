@@ -1,73 +1,142 @@
+import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import useAuthStore from '../store/authStore'
 
-const NAV_LINKS = [
-  { path: '/decks',    label: 'My Decks' },
-  { path: '/study',    label: 'Study' },
-  { path: '/progress', label: 'Progress' },
+const LINKS = [
+  { path: '/decks',    label: 'My Decks',    icon: '📚' },
+  { path: '/study',    label: 'PDF Library', icon: '📄' },
+  { path: '/progress', label: 'Progress',    icon: '📊' },
 ]
 
 export default function Navbar() {
   const { accessToken, clearAuth } = useAuthStore()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const handleLogout = () => {
-    clearAuth()
-    navigate('/login')
-  }
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const [open, setOpen] = useState(false)
 
   if (!accessToken) return null
 
+  const logout = () => { clearAuth(); navigate('/login'); setOpen(false) }
+  const close  = () => setOpen(false)
+
+  const linkStyle = (active) => ({
+    display: 'flex', alignItems: 'center', gap: 7,
+    padding: '8px 16px', borderRadius: 'var(--radius-sm)',
+    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.95rem',
+    color:      active ? 'var(--navy)' : 'rgba(255,255,255,0.78)',
+    background: active ? 'var(--primary)' : 'transparent',
+    transition: 'all 0.15s',
+    textDecoration: 'none',
+  })
+
   return (
-    <nav style={{
-      background: 'var(--cm-navy)',
-      padding: '0 32px',
-      display: 'flex',
-      alignItems: 'center',
-      height: '64px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.2)',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
-      {/* Logo */}
-      <Link to="/decks" style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 40 }}>
-        <div style={{
-          width: 32, height: 32,
-          background: 'var(--cm-red)',
-          borderRadius: 8,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: 'var(--font-display)', fontWeight: 900, color: 'white', fontSize: 18
-        }}>C</div>
-        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, color: 'white', fontSize: '1.1rem' }}>
-          Flashcard Engine
-        </span>
-      </Link>
+    <>
+      {/* ── Main bar ─────────────────────────────────────────────────────── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 300,
+        height: 68,
+        background: 'var(--navy)',
+        display: 'flex', alignItems: 'center',
+        padding: '0 28px',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.22)',
+        gap: 8,
+      }}>
 
-      {/* Nav links */}
-      <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-        {NAV_LINKS.map(link => {
-          const active = location.pathname.startsWith(link.path)
-          return (
-            <Link key={link.path} to={link.path} style={{
-              padding: '8px 16px',
-              borderRadius: 'var(--radius-sm)',
-              color: active ? 'white' : 'rgba(255,255,255,0.65)',
-              background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              transition: 'all 0.15s',
-            }}>{link.label}</Link>
-          )
-        })}
-      </div>
+        {/* Brand */}
+        <Link to="/decks" onClick={close} style={{
+          fontFamily: 'var(--font-display)', fontWeight: 900,
+          fontSize: '1.45rem', letterSpacing: '0.06em',
+          color: 'white', textDecoration: 'none',
+          marginRight: 24, flexShrink: 0,
+        }}>
+          CUEMATH
+        </Link>
 
-      {/* Logout */}
-      <button onClick={handleLogout} className="btn btn-ghost" style={{ color: 'rgba(255,255,255,0.7)' }}>
-        Sign Out
-      </button>
-    </nav>
+        {/* Desktop links */}
+        <div className="nav-desktop" style={{ display: 'flex', gap: 4, flex: 1, alignItems: 'center' }}>
+          {LINKS.map(l => {
+            const active = location.pathname.startsWith(l.path)
+            return (
+              <Link key={l.path} to={l.path} style={linkStyle(active)}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.09)' }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span>{l.icon}</span>{l.label}
+              </Link>
+            )
+          })}
+        </div>
+
+        {/* Sign Out — desktop */}
+        <button onClick={logout} className="nav-desktop" style={{
+          background: 'var(--primary)', color: 'var(--navy)',
+          border: 'none', borderRadius: 'var(--radius-sm)',
+          padding: '8px 18px', cursor: 'pointer',
+          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem',
+          display: 'flex', alignItems: 'center', gap: 7,
+          transition: 'all 0.15s', flexShrink: 0,
+        }}
+          onMouseEnter={e => { e.currentTarget.style.background='var(--primary-dark)'; e.currentTarget.style.color='#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background='var(--primary)'; e.currentTarget.style.color='var(--navy)' }}
+        >
+          🚪 Sign Out
+        </button>
+
+        {/* Hamburger — mobile */}
+        <button onClick={() => setOpen(o => !o)} className="nav-mobile" style={{
+          marginLeft: 'auto', background: 'none', border: 'none',
+          cursor: 'pointer', color: 'white', fontSize: '1.5rem',
+          display: 'none', padding: 6, lineHeight: 1,
+        }}>
+          {open ? '✕' : '☰'}
+        </button>
+      </nav>
+
+      {/* ── Mobile drawer ────────────────────────────────────────────────── */}
+      {open && (
+        <div className="nav-mobile" style={{
+          position: 'fixed', top: 68, left: 0, right: 0, zIndex: 299,
+          background: 'var(--navy)',
+          padding: '14px 20px 22px',
+          boxShadow: '0 8px 28px rgba(0,0,0,0.28)',
+          display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          {LINKS.map(l => {
+            const active = location.pathname.startsWith(l.path)
+            return (
+              <Link key={l.path} to={l.path} onClick={close} style={{
+                ...linkStyle(active),
+                fontSize: '1rem', padding: '12px 16px',
+                background: active ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>{l.icon}</span>{l.label}
+              </Link>
+            )
+          })}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 8, paddingTop: 12 }}>
+            <button onClick={logout} style={{
+              width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-sm)',
+              background: 'var(--primary)', border: 'none', cursor: 'pointer',
+              color: 'var(--navy)', fontFamily: 'var(--font-display)',
+              fontWeight: 800, fontSize: '1rem',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              🚪 Sign Out
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Responsive rules — injected once per render */}
+      <style>{`
+        @media (max-width: 640px) {
+          .nav-desktop { display: none !important; }
+          .nav-mobile  { display: flex !important; }
+        }
+        @media (min-width: 641px) {
+          .nav-mobile { display: none !important; }
+        }
+      `}</style>
+    </>
   )
 }
