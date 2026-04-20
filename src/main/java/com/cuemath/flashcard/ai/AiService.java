@@ -12,12 +12,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Central AI gateway with automatic fallback:
- *
- * Primary  → Configurable via Env Var (e.g., gemini-1.5-flash-latest)
- * Fallback → Hardcoded stable model (gemini-1.5-flash)
- *
- * Both providers are called from the backend only — keys never reach the browser.
+ * Central AI gateway with automatic fallback.
+ * * Logic:
+ * 1. Primary: Uses the model defined in Environment Variables (gemini-1.5-flash-latest).
+ * 2. Fallback: Uses a hardcoded stable model (gemini-1.5-flash).
+ * * Uses the stable /v1/ API endpoint and forces JSON output via generationConfig.
  */
 @Service
 @Slf4j
@@ -39,25 +38,20 @@ public class AiService {
         this.geminiApiKey     = geminiApiKey;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Public API
-    // ─────────────────────────────────────────────────────────────────────────
-
     /**
-     * Calls the primary Gemini model. If it fails (quota, 404, etc.),
-     * retries with the stable fallback model.
+     * Entry point for AI calls. Attempts primary model, then falls back on failure.
      */
     public String call(String systemPrompt, String userMessage) {
         try {
-            log.debug("Calling Gemini Primary: {}", geminiModel);
+            log.debug("Attempting Primary AI ({})...", geminiModel);
             return callGemini(systemPrompt, userMessage);
         } catch (Exception primaryEx) {
-            log.warn("Primary AI failed ({}). Falling back to stable Gemini-1.5-flash...", primaryEx.getMessage());
+            log.warn("Primary AI failed ({}). Retrying with stable fallback...", primaryEx.getMessage());
             try {
                 return callGeminiLite(systemPrompt, userMessage);
             } catch (Exception fallbackEx) {
                 String msg = String.format(
-                        "All AI attempts failed. Primary: [%s] | Fallback: [%s]",
+                        "Critical AI Failure. Primary: [%s] | Fallback: [%s]",
                         primaryEx.getMessage(), fallbackEx.getMessage());
                 log.error(msg);
                 throw new RuntimeException(msg, fallbackEx);
@@ -65,13 +59,9 @@ public class AiService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Private Providers
-    // ─────────────────────────────────────────────────────────────────────────
-
     private String callGemini(String systemPrompt, String userMessage) {
         Map<String, Object> body = createRequestBody(systemPrompt, userMessage);
-
+        // Use v1 endpoint for production stability
         String uri = "/v1/models/" + geminiModel + ":generateContent?key=" + geminiApiKey;
 
         String responseJson = geminiRestClient.post()
@@ -85,8 +75,7 @@ public class AiService {
 
     private String callGeminiLite(String systemPrompt, String userMessage) {
         Map<String, Object> body = createRequestBody(systemPrompt, userMessage);
-
-        // Changed v1beta to v1
+        // Fallback specifically targets the base stable model
         String uri = "/v1/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
 
         String responseJson = geminiRestClient.post()
@@ -98,26 +87,34 @@ public class AiService {
         return extractAndCleanText(responseJson);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────────────────
-
+    /**
+     * Builds the JSON payload for Google AI.
+     * Note: Instructions are prepended to the message for maximum compatibility with v1 API.
+     */
     private Map<String, Object> createRequestBody(String systemPrompt, String userMessage) {
+        String promptWithInstructions = String.format(
+                "SYSTEM INSTRUCTIONS:\n%s\n\nUSER CONTENT:\n%s",
+                systemPrompt, userMessage
+        );
+
         return Map.of(
-                "systemInstruction", Map.of(
-                        "parts", List.of(Map.of("text", systemPrompt))
+                "contents", List.of(
+                        Map.of(
+                                "role", "user",
+                                "parts", List.of(Map.of("text", promptWithInstructions))
+                        )
                 ),
-                "contents", List.of(Map.of(
-                        "role",  "user",
-                        "parts", List.of(Map.of("text", userMessage))
-                )),
                 "generationConfig", Map.of(
                         "maxOutputTokens", 4096,
-                        "temperature",     0.1   // Lower temperature for stricter JSON adherence
+                        "temperature", 0.1,
+                        "responseMimeType", "application/json"
                 )
         );
     }
 
+    /**
+     * Extracts text from the response and strips any Markdown code block artifacts.
+     */
     private String extractAndCleanText(String responseJson) {
         try {
             JsonNode root = objectMapper.readTree(responseJson);
@@ -125,13 +122,13 @@ public class AiService {
                     .get("content").get("parts").get(0)
                     .get("text").asText();
 
-            // Regex: Case-insensitive removal of ```json and the closing ``` backticks
+            // Strip out markdown formatting if the model still includes it despite the mimeType setting
             return rawText.replaceAll("(?i)```json", "")
                     .replaceAll("```", "")
                     .trim();
         } catch (Exception e) {
-            log.error("Failed to extract text from AI response: {}", responseJson);
-            throw new RuntimeException("AI response extraction failed", e);
+            log.error("Failed to parse AI response. Payload: {}", responseJson);
+            throw new RuntimeException("AI JSON extraction failed", e);
         }
     }
 }
