@@ -9,6 +9,7 @@ import Study from './pages/Study'
 import Progress from './pages/Progress'
 import Test from './pages/Test'
 import TestResult from './pages/TestResult'
+import InteractiveGrid from './components/InteractiveGrid';
 
 function PrivateRoute({ children }) {
   const { accessToken } = useAuthStore()
@@ -18,6 +19,7 @@ function PrivateRoute({ children }) {
 export default function App() {
   return (
     <>
+      <InteractiveGrid />
       <Navbar />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />

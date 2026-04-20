@@ -1,0 +1,155 @@
+/* ── Tokens ────────────────────────────────────────────────────────────────── */
+:root {
+  --primary:        #F5A623;
+  --primary-dark:   #D4891A;
+  --primary-light:  #FFF4DE;
+  --primary-shadow: 0 4px 20px rgba(245,166,35,0.32);
+
+  --navy:           #1A2B4A;
+  --navy-light:     #243560;
+  --green:          #00B67A;
+  --green-light:    #E0F7F0;
+  --red:            #E84427;
+  --red-dark:       #C5311A;
+  --red-light:      #FFE8E3;
+
+  --bg:             #FFFFFF;
+  --surface:        #FFFFFF;
+  --border:         #E5E8F0;
+  --border-dark:    #D0D5E0;
+  --text:           #1A2B4A;
+  --text-sub:       #5A6A85;
+  --text-muted:     #8A95A8;
+
+  --grid-line:      rgba(26,43,74,0.055);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 1px 6px rgba(26,43,74,0.07), 0 2px 12px rgba(26,43,74,0.05);
+  --shadow-md: 0 4px 20px rgba(26,43,74,0.11);
+  --shadow-lg: 0 8px 40px rgba(26,43,74,0.14);
+
+  --font-display: 'Nunito', sans-serif;
+  --font-body:    'Nunito Sans', sans-serif;
+
+  /* aliases so old pages keep working */
+  --cm-red:          var(--primary);
+  --cm-red-dark:     var(--primary-dark);
+  --cm-red-light:    var(--primary-light);
+  --cm-navy:         var(--navy);
+  --cm-navy-light:   var(--navy-light);
+  --cm-green:        var(--green);
+  --cm-green-light:  var(--green-light);
+  --cm-yellow:       var(--primary);
+  --cm-yellow-light: var(--primary-light);
+  --cm-bg:           #F4F6FB;
+  --cm-surface:      var(--surface);
+  --cm-border:       var(--border);
+  --cm-text:         var(--text);
+  --cm-text-sub:     var(--text-sub);
+  --cm-text-muted:   var(--text-muted);
+  --shadow-red:      var(--primary-shadow);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Body: white + math notebook grid ─────────────────────────────────────── */
+body {
+  font-family: var(--font-body);
+  background-color: #fff;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+h1,h2,h3,h4,h5 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--navy);
+}
+a { text-decoration: none; color: inherit; }
+input,textarea,select { font-family: var(--font-body); }
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display); font-weight: 700; font-size: 0.92rem;
+  cursor: pointer; border: none;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+.btn-primary  { background: var(--primary); color: var(--navy); box-shadow: var(--primary-shadow); }
+.btn-primary:hover { background: var(--primary-dark); color: #fff; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary { background: #fff; color: var(--navy); border: 2px solid var(--border); }
+.btn-secondary:hover { border-color: var(--primary); color: var(--primary-dark); }
+.btn-ghost { background: transparent; color: var(--text-sub); padding: 8px 14px; }
+.btn-ghost:hover { background: rgba(0,0,0,0.04); color: var(--navy); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* ── Cards ─────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  padding: 22px;
+}
+
+/* ── Badges ────────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 100px;
+  font-size: 0.72rem; font-weight: 700;
+  font-family: var(--font-display); white-space: nowrap;
+}
+.badge-green  { background: var(--green-light);  color: #007A54; }
+.badge-yellow { background: var(--primary-light); color: #9A6600; }
+.badge-red    { background: var(--red-light);    color: var(--red-dark); }
+.badge-blue   { background: #E8F0FE;             color: #1A6AD4; }
+
+/* ── Animations ────────────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.animate-in { animation: fadeInUp 0.28s ease both; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ── Page wrapper ──────────────────────────────────────────────────────────── */
+.page {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 36px clamp(16px, 4vw, 72px);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .page { padding: 28px clamp(16px, 3vw, 40px); }
+}
+@media (max-width: 768px) {
+  .page { padding: 20px 16px; }
+  .card { padding: 16px; }
+  .btn  { padding: 9px 15px; font-size: 0.88rem; }
+}
+@media (max-width: 480px) {
+  .page { padding: 14px 12px; }
+  .btn  { padding: 8px 13px; font-size: 0.85rem; }
+  h1 { font-size: 1.5rem !important; }
+}

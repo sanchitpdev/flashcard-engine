@@ -64,10 +64,10 @@ public class AiService {
             log.debug("Gemini responded successfully.");
             return result;
         } catch (Exception geminiEx) {
-            log.warn("Gemini failed ({}). Falling back to Grok...", geminiEx.getMessage());
+            log.warn("Gemini failed ({}). Falling back to Gemini-lite...", geminiEx.getMessage());
             try {
                 String result = callGeminiLite(systemPrompt, userMessage);
-                log.info("Grok fallback succeeded.");
+                log.info("Gemini-lite fallback succeeded.");
                 return result;
             } catch (Exception grokEx) {
                 String msg = String.format(
