@@ -71,7 +71,8 @@ public class AiService {
 
     private String callGemini(String systemPrompt, String userMessage) {
         Map<String, Object> body = createRequestBody(systemPrompt, userMessage);
-        String uri = "/v1beta/models/" + geminiModel + ":generateContent?key=" + geminiApiKey;
+
+        String uri = "/v1/models/" + geminiModel + ":generateContent?key=" + geminiApiKey;
 
         String responseJson = geminiRestClient.post()
                 .uri(uri)
@@ -84,8 +85,9 @@ public class AiService {
 
     private String callGeminiLite(String systemPrompt, String userMessage) {
         Map<String, Object> body = createRequestBody(systemPrompt, userMessage);
-        // Using 1.5-flash as it is the most stable and reliable fallback model
-        String uri = "/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
+
+        // Changed v1beta to v1
+        String uri = "/v1/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
 
         String responseJson = geminiRestClient.post()
                 .uri(uri)
